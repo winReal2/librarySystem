@@ -8,6 +8,8 @@ import java.sql.Statement;
 import com.library.common.ConnectionUtil;
 import com.library.vo.Member;
 
+import common.DBConnPool;
+
 public class MemberDao {
 	/**
 	 * 사용자 로그인
@@ -25,7 +27,7 @@ public class MemberDao {
 		// 쿼리 출력
 		// System.out.println(sql);
 		
-		try (Connection conn = ConnectionUtil.getConnection();
+		try (Connection conn = DBConnPool.getConnection();
 				Statement stmt = conn.createStatement();
 				ResultSet rs = stmt.executeQuery(sql);){
 			// 질의결과 결과집합을 member객체에 담아줍니다

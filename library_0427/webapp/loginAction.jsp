@@ -28,8 +28,8 @@
 	<%
 	
 	// name속성의 값을 매개값으로 넘겨주면 value속성의 값을 반환 합니다.
-	String id = request.getParameter("userid");
-	String pw = request.getParameter("userpw");
+	String id = request.getParameter("userId");
+	String pw = request.getParameter("userPw");
 	
 	// out.print("saveYN : " + saveYN + "<br>");
 	

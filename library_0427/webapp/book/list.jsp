@@ -22,22 +22,16 @@
 			delNo += e.value + ',';
 		});
 		
-		delNo = delNo.subStr(0, delNo.length-1);
+		delNo = delNo.substr(0, delNo.length-1);
 		
 		console.log("삭제할 번호 : " + delNo);
 		
 		// 삭제 요청
-		searchForm.action = "../book/delete.book";
+		searchForm.action = "./delete.book";
 		searchForm.delNo.value = delNo;
 		searchForm.submit();  
 	}
-	
-	function insertBook(){
-		
-		
-	}
-	
-	
+
 </script>
 
 </head>
@@ -57,7 +51,7 @@ ${ list }
 
 	<tr>
 		<th></th>
-		<th>제목</th>
+		<th><a href="./view.book">제목</a></th>
 		<th>저자</th>
 		<th>대여여부/반납일</th>
 		<th>등록일</th>
@@ -70,10 +64,10 @@ ${ list }
 	</c:if>
 	
 	<c:if test="${ not res }">
+	
 		<c:forEach items="${ map.list }" var="book" step="1">
 			<tr>
 				<td class="center">
-				
 					<!-- 삭제용 체크박스 -->
 					<input type="checkbox" name="delNo" value="${ book.no }">
 				</td>
@@ -93,22 +87,19 @@ ${ list }
 	<tr>
 		<td colspan="5" class="right" align="center">
 		<!-- 어드민 계정인 경우 등록, 삭제 버튼을 출력 -->
-		<button onclick="insertBook()">도서등록</button>
+		<button onclick="location.href='./write.book'">도서등록</button>
 		<button onclick="deleteBook()">도서삭제</button>
 		</td>
 	</tr>
 	</c:if>
-</table>
-
-<!-- 페이징 -->
 <!-- 페이지 블록 -->
-<table border="1" width='90%'>
 		<tr>
-			<td align="center">
+			<td colspan="5" align="center">
 			<%@include file="../common/pageNavi.jsp" %>
 			</td>
 		</tr>
-	</table>
+</table>
+
 
 	
 <!-- 상세보기 -->

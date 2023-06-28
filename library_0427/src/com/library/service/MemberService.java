@@ -18,12 +18,13 @@ public class MemberService {
 		member = dao.login(id, pw);
 		if(member == null){
 			System.err.println("아이디/비밀번호를 확인해주세요");
+			
 		} else {
 			System.out.println(member.getName()+"님 환영합니다.");
 		}
 		return member;
 	}
-
+//=============================================================================
 	public void insert (String id, String pw, String name, String adminYN) {
 		
 		// 아이디 중복체크

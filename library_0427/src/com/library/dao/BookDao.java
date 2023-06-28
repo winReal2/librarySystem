@@ -29,10 +29,10 @@ public class BookDao {
 				+ " select t.*, rownum rn "
 				+ " from ("		
 				+ " select no, title"
-				+ "    , nvl((select 대여여부 "
-				+ "			 from 대여 "
-				+ "			where 도서번호 = no "
-				+ "			  and 대여여부='Y'),'N') rentyn "
+//				+ "    , nvl((select 대여여부 "
+//				+ "			  from 대여 "
+//				+ "			  where 도서번호 = no "
+//				+ "			  and 대여여부='Y'),'N') rentyn "
 				+ "    , author "
 				+ "from book ";
 		
@@ -41,7 +41,7 @@ public class BookDao {
 				sql += "where" + cri.getSearchField()
 					+" like '%'" + cri.getSearchWord() + "%'";
 		}
-		sql += " order by no ) t"
+		sql += " order by no desc) t"
 			+ ")"
 			+ "where rn between " + cri.getStartNo() + " and " + cri.getEndNo();
 		
@@ -54,7 +54,7 @@ public class BookDao {
 				// stmt.executeUpdate : int (몇건이 처리되었는지!!!)
 				ResultSet rs = stmt.executeQuery(sql)){
 			while(rs.next()) {
-				int no = rs.getInt(1);
+				String no = rs.getString(1);
 				String title = rs.getString(2);
 				String rentYN = rs.getString(3);
 				String author = rs.getString(4);
@@ -70,6 +70,11 @@ public class BookDao {
 		return list;
 	}
 	
+	
+	
+	
+	
+	
 	/**
 	 * 도서 등록
 	 * @param book
@@ -79,8 +84,9 @@ public class BookDao {
 		int res = 0;
 		
 		String sql = String.format
-	("insert into book values (SEQ_BOOK_NO.NEXTVAL, '%s', '%s', '%s')"
-				, book.getTitle(), book.getRentyn(), book.getAuthor());
+	("insert into book values (SEQ_BOOK_NO.NEXTVAL, '%s', '%s', '%s', '%s', '%s', null)"  // rentno는 null(처음엔 없으니께)
+				, book.getTitle(), book.getRentyn(), book.getAuthor()
+				, book.getOfile(), book.getSfile());
 
 		// 실행될 쿼리를 출력해봅니다
 		//System.out.println(sql);
@@ -181,9 +187,9 @@ public class BookDao {
 				PreparedStatement psmt = conn.prepareStatement(sql);){
 			ResultSet rs = psmt.executeQuery();
 			
-			if(rs.next()) {
-				totalCnt = rs.getInt(1);
-			}
+			rs.next();
+			totalCnt = rs.getInt(1);
+			System.out.println("totalCnt : " + totalCnt);
 			
 			rs.close();
 		} catch (SQLException e) {
@@ -193,6 +199,123 @@ public class BookDao {
 		System.out.println(totalCnt);
 		
 		return totalCnt;
+	}
+	
+	/**
+	 * 상세페이지 조회
+	 * @param no
+	 * @return
+	 */
+	public Book selectOne(String no) {
+		Book book = null;
+		
+		String sql = "select "
+					+ " b.no, b.title, d.대여여부, b.author, d.아이디"
+					+ " , to_char(대여일, 'yy/mm/dd') 대여일"
+					+ " , to_char(반납가능일, 'yy/mm/dd') 반납가능일"
+					+ " , 반납일, sfile, ofile, d.대여번호"
+					+ " from book b, 대여 d "
+					+ " where b.rentno = d.대여번호(+) and b.no=" + no;
+		
+		System.out.println(sql);
+		
+		// try ( 리소스생성 ) => try문이 종료되면서 리소스를 자동으로 반납
+		try (Connection conn = DBConnPool.getConnection();
+				Statement stmt = conn.createStatement();
+				// stmt.executeQuery : resultSet (질의한 쿼리에 대한 결과집합)
+				// stmt.executeUpdate : int (몇건이 처리되었는지!!!)
+				ResultSet rs = stmt.executeQuery(sql)){
+			if(rs.next()) {
+				String bookNo = rs.getString(1);
+				String title = rs.getString(2);
+				String rentYN = rs.getString(3);
+				String author = rs.getString(4);
+				
+				book = new Book(bookNo, title, rentYN, author);
+				
+				book.setId(rs.getString(5));
+				book.setStartDate(rs.getString(6));
+				book.setEndDate(rs.getString(7));
+				book.setReturnDate(rs.getString(8));
+				book.setSfile(rs.getString(9));
+				book.setOfile(rs.getString(10));
+				book.setRentno(rs.getString(11));
+				}
+			
+		} catch(SQLException e) {
+			e.printStackTrace();
+		}
+			
+				return book;
+	}
+	
+	
+	
+	public int rentBook(Book book) {
+		int res = 0;
+		String sql1= "select 'R'||lpad(seq_대여.nextval||'', 5, 0) from dual;";
+		String sql2= "update book set rentno=? where no=? and (rentno ='' or rentno is null)";
+		String sql3= "insert into 대여  values(?, ?, ?, 'Y'"
+				+ "                        , sysdate, null, sysdate+14, null)";
+
+		// 1. 대여번호 조회 (R00001 이런형식으로)
+		try (Connection conn = DBConnPool.getConnection();){
+				//자동커밋 안되도록 설정
+				conn.setAutoCommit(false);
+				
+				PreparedStatement psmt = conn.prepareStatement(sql1);
+				ResultSet rs = psmt.executeQuery();
+				if(!rs.next()) {
+					return res;
+				}
+				
+				String rentno = rs.getString(1);
+				//첫번째 쿼리가 잘 실행되었는지 확인
+				System.out.println("rentno : " + rentno);
+				psmt.close();
+				
+				psmt = conn.prepareStatement(sql2);
+				psmt.setString(1, rentno);
+				psmt.setString(2, book.getNo());
+				
+				res = psmt.executeUpdate();
+				
+				System.out.println("sql2 : " + sql2);
+				System.out.println("res : " + res);
+				
+				if(res > 0) {
+					psmt.close();
+					psmt = conn.prepareStatement(sql3);
+					psmt.setString(1, rentno);
+					psmt.setString(2, book.getId());
+					psmt.setString(3, book.getNo());
+					
+					res = psmt.executeUpdate();
+					
+					System.out.println("sql3 : " + sql3);
+					System.out.println("res : " + res);
+					
+					if(res > 0) {
+						conn.commit();
+					} else {
+						conn.rollback();
+					}
+				} else {
+					conn.rollback();
+				}
+				
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
+		// 2. Book테이블 업데이트(rentyn = Y, rentno=대여번호)
+		// 업데이트 조건 : 도서번호, rentno가 null 또는 빈문자열
+		// 3. 대여 테이블 인서트()
+		
+		
+		return res;
 	}
 }
 
